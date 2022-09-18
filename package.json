@@ -1,0 +1,43 @@
+{
+  "name": "my-webpack-project",
+  "version": "1.0.0",
+  "description": "My webpack project",
+  "main": "index.js",
+  "scripts": {
+    "test": "npx jest",
+    "build": "webpack --mode=production --node-env=production",
+    "build:dev": "webpack --mode=development",
+    "build:prod": "webpack --mode=production --node-env=production",
+    "watch": "webpack --watch",
+    "serve": "webpack serve"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/velibegov/frontend-project-11.git"
+  },
+  "author": "velibegov",
+  "license": "MIT",
+  "type": "module",
+  "bugs": {
+    "url": "https://github.com/velibegov/frontend-project-11/issues"
+  },
+  "homepage": "https://github.com/velibegov/frontend-project-11#readme",
+  "devDependencies": {
+    "@webpack-cli/generators": "^0.1.9",
+    "css-loader": "^6.7.1",
+    "eslint": "^8.23.1",
+    "html-webpack-plugin": "^5.5.0",
+    "postcss-loader": "^7.0.1",
+    "prettier": "^2.7.1",
+    "webpack": "^5.74.0",
+    "webpack-cli": "^4.10.0",
+    "webpack-dev-server": "^4.11.0",
+    "workbox-webpack-plugin": "^6.5.4"
+  },
+  "dependencies": {
+    "bootstrap": "^5.2.1",
+    "jquery": "^3.6.1",
+    "popper.js": "^1.16.1",
+    "style-loader": "^3.3.1"
+  }
+}
