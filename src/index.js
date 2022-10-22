@@ -1,3 +1,4 @@
 import 'bootstrap/dist/css/bootstrap.min.css';
+import app from './application.js';
 
-console.log("Hello World!");
+app();
