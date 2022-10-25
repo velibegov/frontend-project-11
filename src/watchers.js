@@ -112,11 +112,13 @@ const render = (state) => {
     });
   });
 
-  feedsBorder.append(feedsUl);
-  feeds.append(feedsBorder);
+  if (state.rssForm.isValid && state.feeds.length > 0) {
+    feedsBorder.append(feedsUl);
+    feeds.append(feedsBorder);
 
-  postsBorder.append(postsUl);
-  posts.append(postsBorder);
+    postsBorder.append(postsUl);
+    posts.append(postsBorder);
+  }
 
   if (Object.keys(state.rssForm.modalContent).length !== 0) {
     showModal(state);

@@ -80,6 +80,7 @@ const app = () => {
         data.forEach((item) => {
           const content = rssParse(item.contents);
           if (!content.querySelector('parsererror')) {
+            state.urls = state.urls.concat(item.status.url);
             const itemList = [];
             const items = content.querySelectorAll('item');
             items.forEach((current) => {
@@ -97,6 +98,7 @@ const app = () => {
               links.push(feed.link);
             });
             if (!links.includes(currentLink)) {
+              state.rssForm.isValid = true;
               watchState(state).feeds.push({
                 link: currentLink,
                 title: content.querySelector('title').innerHTML,
@@ -106,6 +108,7 @@ const app = () => {
             }
           } else {
             watchState(state).rssForm.error = i18next.t(ru.rssForm.feedback.notValidRss);
+            watchState(state).rssForm.isValid = false;
           }
         });
       })
@@ -125,13 +128,11 @@ const app = () => {
     const url = data.get('url');
     schema.validate({ url })
       .then(() => {
-        state.urls.push(url);
-        state.rssForm.isValid = true;
-        feedsUpdate(urlsBypass(state.urls));
+        feedsUpdate(urlsBypass(state.urls.concat(url)));
       })
       .catch((error) => {
+        state.rssForm.isValid = false;
         watchState(state).rssForm.error = error.message;
-        watchState(state).rssForm.isValid = false;
       })
       .finally(() => {
         /* eslint-disable no-unused-vars */
