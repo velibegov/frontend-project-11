@@ -112,13 +112,26 @@ const render = (state) => {
     });
   });
 
-  if (state.rssForm.isValid && state.feeds.length > 0) {
     feedsBorder.append(feedsUl);
     feeds.append(feedsBorder);
 
     postsBorder.append(postsUl);
     posts.append(postsBorder);
-  }
+
+  const buttons = document.querySelectorAll('button[data-id]');
+  buttons.forEach((element) => {
+    element.addEventListener('click', () => {
+      const id = parseInt(element.dataset.id, 10);
+      const viewed = document.querySelector(`a[data-id="${id}"]`);
+      const content = state.feeds.map((feed) => feed.items.filter((item) => item.dataId === id));
+      state.rssForm.modalContent = {
+        title: content[0][0].title,
+        description: content[0][0].description.replace('<![CDATA[', '').replace(']]>', ''),
+        link: content[0][0].link,
+      };
+      watchState(state).viewedUrls.push(viewed.href);
+    });
+  });
 
   if (Object.keys(state.rssForm.modalContent).length !== 0) {
     showModal(state);
