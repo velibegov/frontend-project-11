@@ -118,8 +118,8 @@ const app = () => {
         /* eslint-disable no-unused-vars */
         let update = setTimeout(function recursion() {
           feedsUpdate(urlsBypass(state.urls));
-          update = setTimeout(recursion, 5000);
-        }, 5000);
+          update = setTimeout(recursion, 20000);
+        }, 20000);
         /* eslint-enable no-unused-vars */
       });
   });
