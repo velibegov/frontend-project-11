@@ -24,7 +24,9 @@ const showModal = (state) => {
       modalContainer.removeAttribute('style');
       modalContainer.removeAttribute('aria-modal');
       modalContainer.setAttribute('aria-hidden', 'true');
+      /* eslint-disable no-param-reassign */
       state.rssForm.modalContent = {};
+      /* eslint-enable no-param-reassign */
     });
   });
 };

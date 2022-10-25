@@ -63,12 +63,11 @@ const app = () => {
       element.addEventListener('click', () => {
         const id = parseInt(element.dataset.id, 10);
         const viewed = document.querySelector(`a[data-id="${id}"]`);
-        let content = [];
-        state.feeds.map((feed) => content = feed.items.filter((item) => item.dataId === id));
+        const content = state.feeds.map((feed) => feed.items.filter((item) => item.dataId === id));
         state.rssForm.modalContent = {
-          title: content[0].title,
-          description: content[0].description.replace('<![CDATA[', '').replace(']]>', ''),
-          link: content[0].link,
+          title: content[0][0].title,
+          description: content[0][0].description.replace('<![CDATA[', '').replace(']]>', ''),
+          link: content[0][0].link,
         };
         watchState(state).viewedUrls.push(viewed.href);
       });
@@ -135,10 +134,12 @@ const app = () => {
         watchState(state).rssForm.isValid = false;
       })
       .finally(() => {
+        /* eslint-disable no-unused-vars */
         let update = setTimeout(function recursion() {
           feedsUpdate(urlsBypass(state.urls));
           update = setTimeout(recursion, 5000);
         }, 5000);
+        /* eslint-enable no-unused-vars */
       });
   });
 };
