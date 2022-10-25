@@ -112,11 +112,11 @@ const render = (state) => {
     });
   });
 
-    feedsBorder.append(feedsUl);
-    feeds.append(feedsBorder);
+  feedsBorder.append(feedsUl);
+  feeds.append(feedsBorder);
 
-    postsBorder.append(postsUl);
-    posts.append(postsBorder);
+  postsBorder.append(postsUl);
+  posts.append(postsBorder);
 
   const buttons = document.querySelectorAll('button[data-id]');
   buttons.forEach((element) => {
@@ -124,12 +124,16 @@ const render = (state) => {
       const id = parseInt(element.dataset.id, 10);
       const viewed = document.querySelector(`a[data-id="${id}"]`);
       const content = state.feeds.map((feed) => feed.items.filter((item) => item.dataId === id));
+      /* eslint-disable no-param-reassign */
       state.rssForm.modalContent = {
         title: content[0][0].title,
         description: content[0][0].description.replace('<![CDATA[', '').replace(']]>', ''),
         link: content[0][0].link,
       };
+      /* eslint-enable no-param-reassign */
+      /* eslint-disable no-use-before-define */
       watchState(state).viewedUrls.push(viewed.href);
+      /* eslint-enable no-use-before-define */
     });
   });
 
