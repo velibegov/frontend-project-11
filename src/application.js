@@ -28,6 +28,7 @@ const app = () => {
         rssForm: {
           status: '',
           isUpdated: true,
+          currentUrl: '',
           urls: [],
           feeds: [],
           modalContent: {},
@@ -64,7 +65,8 @@ const app = () => {
               ) {
                 const content = rssParse(item.data.contents);
                 if (!content.querySelector('parsererror')) {
-                  state.rssForm.urls = [...state.rssForm.urls, item.data.status.url];
+                  state.rssForm.urls = [...state.rssForm.urls, state.rssForm.currentUrl];
+                  state.rssForm.currentUrl = '';
                   const itemList = [];
                   const items = content.querySelectorAll('item');
                   items.forEach((current) => {
@@ -117,6 +119,7 @@ const app = () => {
           .then((responseData) => {
             if (responseData) {
               watchedState.rssForm.status = STATE_STATUSES.PROCESSING;
+              state.rssForm.currentUrl = url;
               feedsUpdate([responseData]);
             }
           })
