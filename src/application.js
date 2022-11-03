@@ -122,8 +122,8 @@ const app = () => {
               const promises = state.rssForm.urls.map((currentUrl) => sendRequest(currentUrl));
               state.rssForm.isUpdated = true;
               feedsUpdate(promises);
-              setTimeout(recursion, 5000);
-            }, 5000);
+              setTimeout(recursion, 60000);
+            }, 60000);
           });
       });
     });
