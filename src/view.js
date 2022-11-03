@@ -1,4 +1,13 @@
-import { STATE_STATUSES } from './application.js';
+export const STATE_STATUSES = {
+  NETWORK_PROBLEMS: 'network problems',
+  RENDERING: 'success rendering',
+  PARSE_ERROR: 'parse error',
+  URL_EXIST: 'url exist',
+  SUBMITTING: 'submitting',
+  PROCESSING: 'processing',
+  INVALID_URL: 'url must be a valid URL',
+  SHOWING_MODAL: 'showing modal',
+};
 
 const processRender = (isBlocked = false) => {
   const input = document.getElementById('url-input');
@@ -134,13 +143,10 @@ const feedRender = (state) => {
         const viewed = document.querySelector(`a[data-id="${id}"]`);
         viewed.classList.remove('fw-bold');
         viewed.classList.add('fw-normal');
-        let items = [];
-        state.rssForm.feeds.map((feed) => {
-          items = [...items, ...feed.items];
-        });
-        const content = items.reduce((carry, item) => {
-          if (item.dataId === id) {
-            carry = item;
+        const items = state.rssForm.feeds.map((feed) => [...items, ...feed.items]);
+        const content = items.reduce((carry, current) => {
+          if (current.dataId === id) {
+            carry = current;
           }
           return carry;
         }, {});
@@ -193,6 +199,7 @@ const render = (state, i18n) => {
       feedbackRender(i18n('rssForm.feedback.success'), false, state.rssForm.isUpdated);
       feedRender(state);
       break;
+    default: break;
   }
 };
 

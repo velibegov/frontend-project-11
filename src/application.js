@@ -3,18 +3,7 @@ import i18next from 'i18next';
 import onChange from 'on-change';
 import axios from 'axios';
 import options from './locales/ru.js';
-import render from './view.js';
-
-export const STATE_STATUSES = {
-  NETWORK_PROBLEMS: 'network problems',
-  RENDERING: 'success rendering',
-  PARSE_ERROR: 'parse error',
-  URL_EXIST: 'url exist',
-  SUBMITTING: 'submitting',
-  PROCESSING: 'processing',
-  INVALID_URL: 'url must be a valid URL',
-  SHOWING_MODAL: 'showing modal',
-};
+import render, { STATE_STATUSES } from './view.js';
 
 const app = () => {
   const PROXY_URL = 'https://allorigins.hexlet.app/get?disableCache=true&url=';
@@ -65,7 +54,9 @@ const app = () => {
               ) {
                 const content = rssParse(item.data.contents);
                 if (!content.querySelector('parsererror')) {
-                  state.rssForm.urls = [...state.rssForm.urls, state.rssForm.currentUrl];
+                  if (state.rssForm.currentUrl.length) {
+                    state.rssForm.urls = [...state.rssForm.urls, state.rssForm.currentUrl];
+                  }
                   state.rssForm.currentUrl = '';
                   const itemList = [];
                   const items = content.querySelectorAll('item');
@@ -127,11 +118,11 @@ const app = () => {
             watchedState.rssForm.status = error.message;
           })
           .finally(() => {
-            let update = setTimeout(function recursion() {
-              const promises = state.rssForm.urls.map((url) => sendRequest(url));
+            setTimeout(function recursion() {
+              const promises = state.rssForm.urls.map((currentUrl) => sendRequest(currentUrl));
               state.rssForm.isUpdated = true;
               feedsUpdate(promises);
-              update = setTimeout(recursion, 5000);
+              setTimeout(recursion, 5000);
             }, 5000);
           });
       });
