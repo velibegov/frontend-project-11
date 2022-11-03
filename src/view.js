@@ -1,4 +1,37 @@
-import onChange from 'on-change';
+import { STATE_STATUSES } from './application.js';
+
+const processRender = (isBlocked = false) => {
+  const input = document.getElementById('url-input');
+  const button = document.querySelector('button[type="submit"]');
+  if (isBlocked) {
+    input.removeAttribute('disabled');
+    button.removeAttribute('disabled');
+  } else {
+    input.setAttribute('disabled', '');
+    button.setAttribute('disabled', '');
+  }
+};
+
+const feedbackRender = (feedback, isError, isUpdated) => {
+  if (!isUpdated) {
+    const inputElement = document.getElementById('url-input');
+    const feedbackElement = document.getElementsByClassName('feedback').item(0);
+
+    if (isError) {
+      feedbackElement.classList.remove('text-success');
+      feedbackElement.classList.add('text-danger');
+      feedbackElement.innerHTML = feedback;
+      inputElement.classList.add('is-invalid');
+    } else {
+      inputElement.classList.remove('is-invalid');
+      inputElement.value = '';
+      feedbackElement.classList.remove('text-danger');
+      feedbackElement.classList.add('text-success');
+      feedbackElement.innerHTML = feedback;
+      inputElement.focus();
+    }
+  }
+};
 
 const showModal = (state) => {
   const body = document.getElementsByTagName('body').item(0);
@@ -26,28 +59,13 @@ const showModal = (state) => {
       modalContainer.setAttribute('aria-hidden', 'true');
       /* eslint-disable no-param-reassign */
       state.rssForm.modalContent = {};
+      state.rssForm.status = '';
       /* eslint-enable no-param-reassign */
     });
   });
 };
 
-const render = (state) => {
-  const input = document.getElementById('url-input');
-  const feedback = document.getElementsByClassName('feedback').item(0);
-  if (state.rssForm.isValid) {
-    input.classList.remove('is-invalid');
-    input.value = '';
-    feedback.classList.remove('text-danger');
-    feedback.classList.add('text-success');
-    feedback.innerHTML = state.rssForm.feedback;
-    input.focus();
-  } else {
-    feedback.classList.remove('text-success');
-    feedback.classList.add('text-danger');
-    feedback.innerHTML = state.rssForm.error;
-    input.classList.add('is-invalid');
-  }
-
+const feedRender = (state) => {
   const feeds = document.getElementsByClassName('feeds').item(0);
   feeds.innerHTML = '';
   const feedsBorder = document.createElement('div');
@@ -77,7 +95,7 @@ const render = (state) => {
   postsBody.append(postsTitle);
   postsBorder.append(postsBody);
 
-  state.feeds.forEach((element) => {
+  state.rssForm.feeds.forEach((element) => {
     const feedLi = document.createElement('li');
     feedLi.classList.add('list-group-item', 'border-0', 'border-end-0');
     const h3 = document.createElement('h3');
@@ -92,13 +110,18 @@ const render = (state) => {
       const postLi = document.createElement('li');
       postLi.classList.add('list-group-item', 'd-flex', 'justify-content-between', 'align-items-start', 'border-0', 'border-end-0');
       const a = document.createElement('a');
-      const fwClass = state.viewedUrls.includes(item.link) ? 'fw-normal' : 'fw-bold';
+      const fwClass = state.rssUI.viewedUrls.includes(item.link) ? 'fw-normal' : 'fw-bold';
       a.classList.add(fwClass);
       a.setAttribute('href', item.link);
       a.setAttribute('target', '_blank');
       a.setAttribute('rel', 'noopener noreferrer');
       a.setAttribute('data-id', item.dataId);
       a.innerHTML = item.title;
+      a.addEventListener('click', () => {
+        state.rssUI.viewedUrls.push(item.link);
+        a.classList.remove('fw-bold');
+        a.classList.add('fw-normal');
+      });
       const button = document.createElement('button');
       button.setAttribute('type', 'button');
       button.setAttribute('data-bs-toggle', 'modal');
@@ -106,6 +129,30 @@ const render = (state) => {
       button.setAttribute('data-bs-target', '#modal');
       button.classList.add('btn', 'btn-outline-primary', 'btn-sm');
       button.innerHTML = 'Просмотр';
+      button.addEventListener('click', () => {
+        const { id } = button.dataset;
+        const viewed = document.querySelector(`a[data-id="${id}"]`);
+        viewed.classList.remove('fw-bold');
+        viewed.classList.add('fw-normal');
+        let items = [];
+        state.rssForm.feeds.map((feed) => {
+          items = [...items, ...feed.items];
+        });
+        const content = items.reduce((carry, item) => {
+          if (item.dataId === id) {
+            carry = item;
+          }
+          return carry;
+        }, {});
+        state.rssForm.modalContent = {
+          title: content.title,
+          description: content.description.replace('<![CDATA[', '').replace(']]>', ''),
+          link: content.link,
+        };
+        state.rssUI.viewedUrls.push(viewed.href);
+        showModal(state);
+      });
+
       postLi.append(a);
       postLi.append(button);
       postsUl.append(postLi);
@@ -117,35 +164,36 @@ const render = (state) => {
 
   postsBorder.append(postsUl);
   posts.append(postsBorder);
+};
 
-  const buttons = document.querySelectorAll('button[data-id]');
-  buttons.forEach((element) => {
-    element.addEventListener('click', () => {
-      const id = parseInt(element.dataset.id, 10);
-      const viewed = document.querySelector(`a[data-id="${id}"]`);
-      const content = state.feeds.map((feed) => feed.items.filter((item) => item.dataId === id));
-      /* eslint-disable no-param-reassign */
-      state.rssForm.modalContent = {
-        title: content[0][0].title,
-        description: content[0][0].description.replace('<![CDATA[', '').replace(']]>', ''),
-        link: content[0][0].link,
-      };
-      /* eslint-enable no-param-reassign */
-      /* eslint-disable no-use-before-define */
-      watchState(state).viewedUrls.push(viewed.href);
-      /* eslint-enable no-use-before-define */
-    });
-  });
-
-  if (Object.keys(state.rssForm.modalContent).length !== 0) {
-    showModal(state);
+const render = (state, i18n) => {
+  switch (state.rssForm.status) {
+    case STATE_STATUSES.SUBMITTING:
+      processRender();
+      break;
+    case STATE_STATUSES.PROCESSING:
+      processRender(true);
+      break;
+    case STATE_STATUSES.URL_EXIST:
+      feedbackRender(i18n('rssForm.feedback.urlAlreadyExists'), true, state.rssForm.isUpdated);
+      break;
+    case STATE_STATUSES.INVALID_URL:
+      feedbackRender(i18n('rssForm.feedback.notValidUrl'), true, state.rssForm.isUpdated);
+      break;
+    case STATE_STATUSES.NETWORK_PROBLEMS:
+      feedbackRender(i18n('rssForm.feedback.networkProblems'), true, state.rssForm.isUpdated);
+      break;
+    case STATE_STATUSES.PARSE_ERROR:
+      feedbackRender(i18n('rssForm.feedback.notValidRss'), true, state.rssForm.isUpdated);
+      break;
+    case STATE_STATUSES.SHOWING_MODAL:
+      showModal(state);
+      break;
+    case STATE_STATUSES.RENDERING:
+      feedbackRender(i18n('rssForm.feedback.success'), false, state.rssForm.isUpdated);
+      feedRender(state);
+      break;
   }
 };
 
-function watchState(state) {
-  return onChange(state, () => {
-    render(state);
-  });
-}
-
-export default watchState;
+export default render;

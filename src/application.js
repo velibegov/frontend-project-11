@@ -1,128 +1,138 @@
-import { object, string, setLocale } from 'yup';
+import { object, string } from 'yup';
 import i18next from 'i18next';
-import ru from './locales/ru.json';
-import watchState from './watchers.js';
+import onChange from 'on-change';
+import axios from 'axios';
+import options from './locales/ru.js';
+import render from './view.js';
+
+export const STATE_STATUSES = {
+  NETWORK_PROBLEMS: 'network problems',
+  RENDERING: 'success rendering',
+  PARSE_ERROR: 'parse error',
+  URL_EXIST: 'url exist',
+  SUBMITTING: 'submitting',
+  PROCESSING: 'processing',
+  INVALID_URL: 'url must be a valid URL',
+  SHOWING_MODAL: 'showing modal',
+};
 
 const app = () => {
-  const resources = {
-    ru: {
-      translation: ru,
-    },
-  };
+  const PROXY_URL = 'https://allorigins.hexlet.app/get?disableCache=true&url=';
+  const SUCCESS_HTTP_CODE_MIN = 200;
+  const SUCCESS_HTTP_CODE_MAX = 299;
 
-  i18next.init({
-    lng: 'ru',
-    resources,
-  });
+  const i18nInstance = i18next.createInstance();
+  i18nInstance.init(options)
+    .then((i18n) => {
+      const state = {
+        rssForm: {
+          status: '',
+          isUpdated: true,
+          urls: [],
+          feeds: [],
+          modalContent: {},
+          getUid: () => Date.now().toString(36) + Math.random().toString(36).substring(2),
+        },
+        rssUI: {
+          viewedUrls: [],
+        },
+      };
 
-  setLocale({
-    mixed: {
-      notOneOf: i18next.t(ru.rssForm.feedback.urlAlreadyExists),
-    },
-    string: {
-      url: i18next.t(ru.rssForm.feedback.notValidUrl),
-    },
-  });
+      const schema = object({
+        url: string().url().required(),
+      });
 
-  const state = {
-    rssForm: {
-      isValid: false,
-      feedback: '',
-      error: '',
-      uniqAttribute: 0,
-      modalContent: {},
-    },
-    urls: [],
-    viewedUrls: [],
-    feeds: [],
-  };
+      const watchedState = onChange(state, () => {
+        render(state, i18n);
+      });
 
-  const schema = object({
-    url: string()
-      .url()
-      .required()
-      .notOneOf([state.urls]),
-  });
-
-  const rssParse = (content) => new DOMParser().parseFromString(content, 'text/xml');
-
-  const urlsBypass = (urls) => {
-    const promises = [];
-    Array.prototype.forEach.call(urls, (url) => {
-      promises.push(
-        fetch(`https://allorigins.hexlet.app/get?disableCache=true&url=${encodeURIComponent(url.toString())}`)
-          .then((response) => response.json()),
-      );
-    });
-    return promises;
-  };
-
-  const feedsUpdate = (promises) => {
-    Promise.all(promises)
-      .then((data) => {
-        data.forEach((item) => {
-          const content = rssParse(item.contents);
-          if (!content.querySelector('parsererror')) {
-            state.urls = state.urls.concat(item.status.url);
-            const itemList = [];
-            const items = content.querySelectorAll('item');
-            items.forEach((current) => {
-              itemList.push({
-                title: current.querySelector('title').innerHTML,
-                description: current.querySelector('description').innerHTML,
-                link: current.querySelector('link').innerHTML,
-                dataId: state.rssForm.uniqAttribute += 1,
-              });
-            });
-            state.rssForm.feedback = i18next.t(ru.rssForm.feedback.success);
-            const currentLink = content.querySelector('link').innerHTML;
-            const links = [];
-            state.feeds.forEach((feed) => {
-              links.push(feed.link);
-            });
-            if (!links.includes(currentLink)) {
-              state.rssForm.isValid = true;
-              watchState(state).feeds.push({
-                link: currentLink,
-                title: content.querySelector('title').innerHTML,
-                description: content.querySelector('description').innerHTML,
-                items: itemList,
-              });
-            }
-          } else {
-            watchState(state).rssForm.error = i18next.t(ru.rssForm.feedback.notValidRss);
-            watchState(state).rssForm.isValid = false;
-          }
+      const sendRequest = (url) => axios.get(PROXY_URL + encodeURIComponent(url))
+        .catch(() => {
+          watchedState.rssForm.status = STATE_STATUSES.NETWORK_PROBLEMS;
         });
-      })
-      .catch(() => {
-        watchState(state).rssForm.error = i18next.t(ru.rssForm.feedback.networkProblems);
-        watchState(state).rssForm.isValid = false;
-      });
-  };
 
-  const form = document.getElementsByClassName('rss-form').item(0);
-  form.addEventListener('submit', (e) => {
-    e.preventDefault();
-    const data = new FormData(form);
-    const url = data.get('url');
-    schema.validate({ url })
-      .then(() => {
-        feedsUpdate(urlsBypass(state.urls.concat(url)));
-      })
-      .catch((error) => {
-        state.rssForm.isValid = false;
-        watchState(state).rssForm.error = error.message;
-      })
-      .finally(() => {
-        /* eslint-disable no-unused-vars */
-        let update = setTimeout(function recursion() {
-          feedsUpdate(urlsBypass(state.urls));
-          update = setTimeout(recursion, 20000);
-        }, 20000);
-        /* eslint-enable no-unused-vars */
+      const rssParse = (content) => new DOMParser().parseFromString(content, 'application/xhtml+xml');
+
+      const feedsUpdate = (promises) => {
+        Promise
+          .all(promises)
+          .then((data) => {
+            data.forEach((item) => {
+              if (
+                item.status >= SUCCESS_HTTP_CODE_MIN
+                                && item.status <= SUCCESS_HTTP_CODE_MAX
+              ) {
+                const content = rssParse(item.data.contents);
+                if (!content.querySelector('parsererror')) {
+                  state.rssForm.urls = [...state.rssForm.urls, item.data.status.url];
+                  const itemList = [];
+                  const items = content.querySelectorAll('item');
+                  items.forEach((current) => {
+                    itemList.push({
+                      title: current.querySelector('title').innerHTML,
+                      description: current.querySelector('description')?.innerHTML ?? current.innerHTML,
+                      link: current.querySelector('link').innerHTML,
+                      dataId: state.rssForm.getUid(),
+                    });
+                  });
+                  const currentLink = content.querySelector('link').innerHTML;
+                  const links = [];
+                  state.rssForm.feeds.forEach((feed) => {
+                    links.push(feed.link);
+                  });
+                  if (!links.includes(currentLink)) {
+                    state.rssForm.feeds.push({
+                      link: currentLink,
+                      title: content.querySelector('title').innerHTML,
+                      description: content.querySelector('description')?.innerHTML ?? content.innerHTML,
+                      items: itemList,
+                    });
+                  }
+                  watchedState.rssForm.status = STATE_STATUSES.RENDERING;
+                } else {
+                  watchedState.rssForm.status = STATE_STATUSES.PARSE_ERROR;
+                }
+              } else {
+                watchedState.rssForm.status = STATE_STATUSES.NETWORK_PROBLEMS;
+              }
+            });
+          });
+      };
+
+      const form = document.getElementsByClassName('rss-form').item(0);
+      form.addEventListener('submit', (e) => {
+        e.preventDefault();
+        state.rssForm.isUpdated = false;
+        const data = new FormData(form);
+        const url = data.get('url');
+        schema
+          .validate({ url })
+          .then(() => {
+            if (state.rssForm.urls.includes(url)) {
+              throw Error(STATE_STATUSES.URL_EXIST);
+            }
+            watchedState.rssForm.status = STATE_STATUSES.SUBMITTING;
+            return sendRequest(url);
+          })
+          .then((responseData) => {
+            if (responseData) {
+              watchedState.rssForm.status = STATE_STATUSES.PROCESSING;
+              feedsUpdate([responseData]);
+            }
+          })
+          .catch((error) => {
+            watchedState.rssForm.status = error.message;
+          })
+          .finally(() => {
+            let update = setTimeout(function recursion() {
+              const promises = state.rssForm.urls.map((url) => sendRequest(url));
+              state.rssForm.isUpdated = true;
+              feedsUpdate(promises);
+              update = setTimeout(recursion, 5000);
+            }, 5000);
+          });
       });
-  });
+    });
 };
 
 export default app;
