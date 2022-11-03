@@ -66,10 +66,8 @@ const showModal = (state) => {
       modalContainer.removeAttribute('style');
       modalContainer.removeAttribute('aria-modal');
       modalContainer.setAttribute('aria-hidden', 'true');
-      /* eslint-disable no-param-reassign */
       state.rssForm.modalContent = {};
       state.rssForm.status = '';
-      /* eslint-enable no-param-reassign */
     });
   });
 };
@@ -143,7 +141,7 @@ const feedRender = (state) => {
         const viewed = document.querySelector(`a[data-id="${id}"]`);
         viewed.classList.remove('fw-bold');
         viewed.classList.add('fw-normal');
-        const items = state.rssForm.feeds.map((feed) => [...items, ...feed.items]);
+        const items = state.rssForm.feeds.map((feed) => feed.items).flat();
         const content = items.reduce((carry, current) => {
           if (current.dataId === id) {
             carry = current;
